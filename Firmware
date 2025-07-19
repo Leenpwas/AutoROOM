@@ -1,0 +1,120 @@
+#include <WiFi.h>
+#include <WebServer.h>
+
+#define TRIG_PIN 12
+#define ECHO_PIN 14
+#define LDR_PIN 27
+#define RELAY_PIN 32
+
+WebServer server(80);
+
+const char* ssid = "YOUR_SSID";
+const char* password = "YOUR_PASSWORD";
+
+bool lightOn = false;
+bool autoMode = true;
+
+long getDistance() {
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+  long duration = pulseIn(ECHO_PIN, HIGH, 30000);
+  long distance = duration * 0.034 / 2;
+  return distance > 400 || distance == 0 ? 400 : distance;
+}
+
+String getLDRStatus() {
+  int val = digitalRead(LDR_PIN);
+  return val == LOW ? "Dark" : "Light";
+}
+
+void updateRelayState() {
+  digitalWrite(RELAY_PIN, lightOn ? HIGH : LOW);
+}
+
+void handleRoot() {
+  long distance = getDistance();
+  String ldrStatus = getLDRStatus();
+  bool presence = distance < 50;
+
+  if (autoMode) {
+    lightOn = presence && ldrStatus == "Dark";
+    updateRelayState();
+  }
+
+  String html = R"=====(
+    <html><head><meta name='viewport' content='width=device-width, initial-scale=1'>
+    <style>
+    body { font-family: Arial; background: #f0f0f0; margin: 0; padding: 20px; }
+    .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);}
+    h2 { text-align: center; }
+    .status { font-size: 18px; margin-bottom: 10px; }
+    .btn { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; }
+    .on { background: #4CAF50; color: white; }
+    .off { background: #f44336; color: white; }
+    .mode { background: #2196F3; color: white; }
+    </style></head><body>
+    <div class='container'>
+    <h2>Room Lighting Control</h2>
+    <div class='status'><strong>Mode:</strong> )=====";
+  html += autoMode ? "Auto" : "Manual";
+  html += R"(</div>
+    <div class='status'><strong>Light Status:</strong> )" + String(lightOn ? "ON" : "OFF") + R"(</div>
+    <div class='status'><strong>Presence:</strong> )" + String(presence ? "Detected" : "Not Detected") + R"(</div>
+    <div class='status'><strong>Distance:</strong> )" + String(distance) + " cm</div>";
+  html += "<div class='status'><strong>LDR:</strong> " + ldrStatus + "</div>";
+  html += "<form action='/toggle'><button class='btn mode'>Toggle Mode</button></form>";
+  if (!autoMode) {
+    html += "<form action='/on'><button class='btn on'>Turn ON</button></form>";
+    html += "<form action='/off'><button class='btn off'>Turn OFF</button></form>";
+  }
+  html += "</div></body></html>";
+  server.send(200, "text/html", html);
+}
+
+void handleToggle() {
+  autoMode = !autoMode;
+  server.sendHeader("Location", "/", true);
+  server.send(302, "text/plain", "");
+}
+
+void handleOn() {
+  if (!autoMode) {
+    lightOn = true;
+    updateRelayState();
+  }
+  server.sendHeader("Location", "/", true);
+  server.send(302, "text/plain", "");
+}
+
+void handleOff() {
+  if (!autoMode) {
+    lightOn = false;
+    updateRelayState();
+  }
+  server.sendHeader("Location", "/", true);
+  server.send(302, "text/plain", "");
+}
+
+void setup() {
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  pinMode(LDR_PIN, INPUT);
+  pinMode(RELAY_PIN, OUTPUT);
+  updateRelayState();
+
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) delay(500);
+
+  server.on("/", handleRoot);
+  server.on("/toggle", handleToggle);
+  server.on("/on", handleOn);
+  server.on("/off", handleOff);
+  server.begin();
+}
+
+void loop() {
+  server.handleClient();
+}
