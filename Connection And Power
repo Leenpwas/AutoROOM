@@ -1,0 +1,35 @@
+
+
+##  Hardware Connections
+
+| Component       | ESP32 GPIO Pin | Direction | Description                           |
+| --------------- | -------------- | --------- | ------------------------------------- |
+| Ultrasonic TRIG | GPIO12         | Output    | Triggers ultrasonic pulse             |
+| Ultrasonic ECHO | GPIO14         | Input     | Receives echo to measure distance     |
+| LDR Sensor      | GPIO27         | Input     | Digital signal (0 = Dark, 1 = Bright) |
+| DHT11 Data      | GPIO26         | Input     | Reads temperature and humidity        |
+| Relay (Light)   | GPIO32         | Output    | Controls the light bulb or lamp       |
+
+---
+
+##  Power Requirements
+
+| Module            | Voltage Supply | Notes                                               |
+| ----------------- | -------------- | --------------------------------------------------- |
+| ESP32             | 5V             | Via USB or regulated 5V external supply             |
+| Ultrasonic Sensor | 5V             | Common GND with ESP32                               |
+| LDR Module        | 3.3V or 5V     | Digital output version preferred                    |
+| DHT11 Sensor      | 3.3V or 5V     | Make sure it has a pull-up resistor on the data pin |
+| Relay Module      | 5V             | Use opto-isolated relay for safety when using AC    |
+
+---
+
+##  Functional Logic
+
+| Condition                 | Result                           |
+| ------------------------- | -------------------------------- |
+| Distance < 50 cm          | Person detected                  |
+| LDR output = LOW          | Darkness                         |
+| Auto Mode + Person + Dark | Light turns ON                   |
+| Auto Mode + Other states  | Light turns OFF                  |
+| Manual Mode               | User controls from web interface |
