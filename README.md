@@ -18,7 +18,7 @@ This project is ideal for smart homes, hostel rooms, classrooms, or any environm
 
 
 
-#SCHEMATIC
+# Schematic 
 
 <img width="382" height="586" alt="image" src="https://github.com/user-attachments/assets/f6e7d12a-4983-4ae0-bb98-ffc525751e4c" />
 
